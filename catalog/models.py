@@ -61,9 +61,12 @@ class Language(models.Model):
 class Book(models.Model):
     """Model representing a book (but not a specific copy of a book)."""
     title = models.CharField(max_length=200)
-    author = models.ForeignKey('Author', on_delete=models.RESTRICT, null=True)
-    # Foreign Key used because book can only have one author, but authors can have multiple books.
-    # Author as a string rather than object because it hasn't been declared yet in file.
+
+    authors = models.ManyToManyField(
+        'Author',
+        through='BookAuthor',
+        related_name='books'
+    )
 
     summary = models.TextField(
         max_length=1000, help_text="Enter a brief description of the book")
@@ -143,3 +146,13 @@ class Author(models.Model):
     def __str__(self):
         """String for representing the Model object."""
         return f'{self.last_name}, {self.first_name}'
+
+
+class BookAuthor(models.Model):
+    """Model representing the relationship between a book and an author."""
+    book = models.ForeignKey('Book', on_delete=models.CASCADE)
+    author = models.ForeignKey('Author', on_delete=models.CASCADE)
+    author_order = models.IntegerField()
+
+    def __str__(self):
+        return f'{self.book.title} - {self.author}'
