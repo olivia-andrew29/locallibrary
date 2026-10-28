@@ -1,4 +1,6 @@
 from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.views import generic
 from .models import Book, Author, BookInstance, Genre
 
 # Create your views here.
@@ -19,6 +21,11 @@ def index(request):
 
     num_books_the = Book.objects.filter(title__icontains='the').count()
 
+    # Number of visits to this page, stored in the user's session
+    num_visits = request.session.get('num_visits', 0)
+    num_visits += 1
+    request.session['num_visits'] = num_visits
+
     context = {
         'num_books': num_books,
         'num_instances': num_instances,
@@ -26,6 +33,7 @@ def index(request):
         'num_authors': num_authors,
         'num_genres': num_genres,
         'num_books_the': num_books_the,
+        'num_visits': num_visits,
     }
 
     # Render the HTML template index.html with the data in the context variable
@@ -51,3 +59,33 @@ class AuthorListView(generic.ListView):
 
 class AuthorDetailView(generic.DetailView):
     model = Author
+
+
+class LoanedBooksByUserListView(LoginRequiredMixin, generic.ListView):
+    """Generic class-based view listing books on loan to current user."""
+    model = BookInstance
+    template_name = 'catalog/bookinstance_list_borrowed_user.html'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return (
+            BookInstance.objects.filter(borrower=self.request.user)
+            .filter(status__exact='o')
+            .order_by('due_back')
+        )
+
+
+
+class AllBorrowedBooksListView(PermissionRequiredMixin, generic.ListView):
+    """List all borrowed books, accessible only to librarians."""
+    model = BookInstance
+    template_name = 'catalog/bookinstance_list_borrowed_all.html'
+    paginate_by = 10
+    permission_required = 'catalog.can_mark_returned'
+
+    def get_queryset(self):
+        return (
+            BookInstance.objects.filter(status__exact='o')
+            .select_related('book', 'borrower')
+            .order_by('due_back')
+        )
