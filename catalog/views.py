@@ -176,7 +176,7 @@ class BookAuthorFormSetMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        if self.request.method == 'POST':
+        if self.request.method == 'POST' and 'author_set-TOTAL_FORMS' in self.request.POST:
             context['author_formset'] = BookAuthorFormSet(
                 self.request.POST, instance=self.object
             )
@@ -188,6 +188,10 @@ class BookAuthorFormSetMixin:
         return context
 
     def form_valid(self, form):
+        # Allow standard book forms without an author formset.
+        if 'bookauthor_set-TOTAL_FORMS' not in self.request.POST:
+            return super().form_valid(form)
+
         author_formset = BookAuthorFormSet(
             self.request.POST, instance=form.instance
         )
