@@ -1,7 +1,23 @@
+import datetime
+
+from django.contrib.auth.decorators import login_required, permission_required
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+
+from catalog.forms import RenewBookForm
+
 from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.views import generic
 from .models import Book, Author, BookInstance, Genre
+
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+
+from django.forms import inlineformset_factory
+from django.db.models import RestrictedError
+from .models import Book, BookAuthor
 
 # Create your views here.
 
@@ -89,3 +105,124 @@ class AllBorrowedBooksListView(PermissionRequiredMixin, generic.ListView):
             .select_related('book', 'borrower')
             .order_by('due_back')
         )
+
+
+@login_required
+@permission_required('catalog.can_mark_returned', raise_exception=True)
+def renew_book_librarian(request, pk):
+    """View function for renewing a specific BookInstance by librarian."""
+    book_instance = get_object_or_404(BookInstance, pk=pk)
+
+    if request.method == 'POST':
+        form = RenewBookForm(request.POST)
+
+        if form.is_valid():
+            book_instance.due_back = form.cleaned_data['renewal_date']
+            book_instance.save()
+
+            return HttpResponseRedirect(reverse('all-borrowed'))
+
+    else:
+        proposed_renewal_date = (
+            datetime.date.today() + datetime.timedelta(weeks=3)
+        )
+        form = RenewBookForm(
+            initial={'renewal_date': proposed_renewal_date}
+        )
+
+    context = {
+        'form': form,
+        'book_instance': book_instance,
+    }
+
+    return render(request, 'catalog/book_renew_librarian.html', context)
+
+
+class AuthorCreate(PermissionRequiredMixin, CreateView):
+    model = Author
+    fields = ['first_name', 'last_name', 'date_of_birth', 'date_of_death']
+    permission_required = 'catalog.add_author'
+
+
+class AuthorUpdate(PermissionRequiredMixin, UpdateView):
+    model = Author
+    fields = ['first_name', 'last_name', 'date_of_birth', 'date_of_death']
+    permission_required = 'catalog.change_author'
+
+
+class AuthorDelete(PermissionRequiredMixin, DeleteView):
+    model = Author
+    success_url = reverse_lazy('authors')
+    permission_required = 'catalog.delete_author'
+
+    def form_valid(self, form):
+        try:
+            self.object.delete()
+            return HttpResponseRedirect(self.success_url)
+        except Exception:
+            return HttpResponseRedirect(
+                reverse('author-delete', kwargs={'pk': self.object.pk})
+            )
+
+
+BookAuthorFormSet = inlineformset_factory(
+    Book, BookAuthor,
+    fields=['author', 'author_order'],
+    extra=2
+)
+
+
+class BookAuthorFormSetMixin:
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        if self.request.method == 'POST':
+            context['author_formset'] = BookAuthorFormSet(
+                self.request.POST, instance=self.object
+            )
+        else:
+            context['author_formset'] = BookAuthorFormSet(
+                instance=self.object
+            )
+
+        return context
+
+    def form_valid(self, form):
+        author_formset = BookAuthorFormSet(
+            self.request.POST, instance=form.instance
+        )
+
+        if not author_formset.is_valid():
+            return self.form_invalid(form)
+
+        self.object = form.save()
+        author_formset.instance = self.object
+        author_formset.save()
+
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class BookCreate(PermissionRequiredMixin, BookAuthorFormSetMixin, CreateView):
+    model = Book
+    fields = ['title', 'summary', 'isbn', 'genre', 'language']
+    permission_required = 'catalog.add_book'
+
+
+class BookUpdate(PermissionRequiredMixin, BookAuthorFormSetMixin, UpdateView):
+    model = Book
+    fields = ['title', 'summary', 'isbn', 'genre', 'language']
+    permission_required = 'catalog.change_book'
+
+
+class BookDelete(PermissionRequiredMixin, DeleteView):
+    model = Book
+    success_url = reverse_lazy('books')
+    permission_required = 'catalog.delete_book'
+
+    def form_valid(self, form):
+        try:
+            self.object.delete()
+            return HttpResponseRedirect(self.success_url)
+        except RestrictedError:
+            form.add_error(None, 'Delete all copies of this book first.')
+            return self.form_invalid(form)
