@@ -226,3 +226,6 @@ __marimo__/
 
 # Python virtual environment
 .venv/
+
+# Automated test database
+test_db.sqlite3

@@ -92,6 +92,10 @@ DATABASES = {
     "default": env.db(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 }
 
+# Use a separate SQLite database for automated tests
+DATABASES["default"]["TEST"] = {
+    "NAME": BASE_DIR / "test_db.sqlite3",
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -142,6 +146,21 @@ MAILERS = {
 
 # Daphne
 ASGI_APPLICATION = "locallibrary_config.asgi.application"
+
+# Channels
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                {
+                    "address": env("REDIS_URL"),
+                    "socket_timeout": env.int("REDIS_SOCKET_TIMEOUT"),
+                }
+            ],
+        },
+    },
+}
 
 
 # django-allauth
