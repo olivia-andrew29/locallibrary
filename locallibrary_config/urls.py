@@ -58,8 +58,9 @@ urlpatterns += [
 ]
 
 # Mount the TaskFlow API
-from taskflow.api import api as taskflow_api
+from taskflow.api import api as taskflow_api, api_v2 as taskflow_api_v2
 
 urlpatterns += [
     path("taskflow/api/", taskflow_api.urls),
+    path("taskflow/api/v2/", taskflow_api_v2.urls),
 ]

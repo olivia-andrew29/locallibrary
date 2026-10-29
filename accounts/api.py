@@ -10,6 +10,7 @@ from .tokens import create_token_pair, decode_token
 
 
 router = Router(tags=["auth"], auth=None)
+tokens = Router(tags=["auth"], auth=None)
 
 
 @router.post("/signup", response={201: UserOut})
@@ -29,7 +30,7 @@ def signup(request, payload: SignupIn):
     return Status(201, user)
 
 
-@router.post("/token", response=TokenOut)
+@tokens.post("/token", response=TokenOut, deprecated=True)
 def obtain_token(request, payload: TokenIn):
     user = authenticate(
         username=payload.username,
@@ -42,7 +43,7 @@ def obtain_token(request, payload: TokenIn):
     return create_token_pair(user.id)
 
 
-@router.post("/refresh", response=TokenOut)
+@tokens.post("/refresh", response=TokenOut, deprecated=True)
 def refresh_token(request, payload: RefreshIn):
     claims = decode_token(payload.refresh, "refresh")
 
