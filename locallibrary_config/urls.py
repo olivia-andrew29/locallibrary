@@ -43,6 +43,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # django-allauth URLs for login, logout, signup, and password management
 urlpatterns += [
@@ -54,4 +55,11 @@ from .api import api
 
 urlpatterns += [
     path("api/", api.urls),
+]
+
+# Mount the TaskFlow API
+from taskflow.api import api as taskflow_api
+
+urlpatterns += [
+    path("taskflow/api/", taskflow_api.urls),
 ]

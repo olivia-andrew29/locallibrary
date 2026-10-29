@@ -229,3 +229,6 @@ __marimo__/
 
 # Automated test database
 test_db.sqlite3
+
+
+media/

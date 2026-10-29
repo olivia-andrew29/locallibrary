@@ -52,6 +52,9 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'ninja',
+    'projects',
+    'tasks',
+    "accounts",
 ]
 
 MIDDLEWARE = [
@@ -184,3 +187,6 @@ MAILERS = {
 }
 
 LOGIN_URL = 'account_login'
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
