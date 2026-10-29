@@ -51,20 +51,17 @@ def check_relations(project, payload):
 @router.get("/", response=list[TaskOut])
 @paginate(PageNumberPagination, page_size=20)
 def list_tasks(
-    """List the tasks of a project, 20 per page. Filters combine with AND."""
     request,
     project_id: Path[int],
     filters: Query[TaskFilter],
     ordering: TaskOrdering = "created_at",
 ):
+    """List the tasks of a project, 20 per page. Filters combine with AND."""
+
     project = get_project_or_404(request.auth, project_id)
-
     tasks = filters.filter(
-        project.tasks
-        .select_related("assignee")
-        .prefetch_related("labels")
+        project.tasks.select_related("assignee").prefetch_related("labels")
     )
-
     return tasks.order_by(ordering, "id")
 
 
